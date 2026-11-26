@@ -15,6 +15,11 @@ namespace YMH219_KeyEventLogger
         private Button btnStart, btnStop, btnClear, btnSave;
         private Label lblStatus, lblCount;
         private Panel pnlIndicator;
+        private GroupBox grpStats;
+        private Label lblPressCount, lblDistinct;
+        private ListBox lstTopKeys;
+
+        private const int TopKeyCount = 5;
 
         public Form1()
         {
@@ -32,13 +37,13 @@ namespace YMH219_KeyEventLogger
         private void InitializeUi()
         {
             Text = "Key Event Logger (Eğitsel)";
-            ClientSize = new Size(560, 440);
+            ClientSize = new Size(780, 440);
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(480, 360);
+            MinimumSize = new Size(700, 360);
 
             pnlIndicator = new Panel { Size = new Size(16, 16), Location = new Point(12, 16) };
             lblStatus = new Label { AutoSize = true, Location = new Point(34, 15), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            lblCount = new Label { AutoSize = true, Location = new Point(400, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblCount = new Label { AutoSize = true, Location = new Point(620, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
 
             btnStart = MakeButton("Başlat", 12);
             btnStop = MakeButton("Durdur", 112);
@@ -54,13 +59,40 @@ namespace YMH219_KeyEventLogger
             lstLog = new ListBox
             {
                 Location = new Point(12, 90),
-                Size = new Size(536, 338),
+                Size = new Size(550, 338),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Consolas", 9.5f),
                 TabStop = false
             };
 
-            Controls.AddRange(new Control[] { pnlIndicator, lblStatus, lblCount, btnStart, btnStop, btnClear, btnSave, lstLog });
+            // Sağdaki istatistik paneli
+            grpStats = new GroupBox
+            {
+                Text = "İstatistik",
+                Location = new Point(574, 84),
+                Size = new Size(194, 344),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right
+            };
+            lblPressCount = new Label { AutoSize = true, Location = new Point(12, 28) };
+            lblDistinct = new Label { AutoSize = true, Location = new Point(12, 52) };
+            var lblTop = new Label
+            {
+                AutoSize = true,
+                Location = new Point(12, 86),
+                Text = "En sık basılan " + TopKeyCount + " tuş:",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+            lstTopKeys = new ListBox
+            {
+                Location = new Point(12, 110),
+                Size = new Size(170, 120),
+                Font = new Font("Consolas", 9.5f),
+                TabStop = false,
+                SelectionMode = SelectionMode.None
+            };
+            grpStats.Controls.AddRange(new Control[] { lblPressCount, lblDistinct, lblTop, lstTopKeys });
+
+            Controls.AddRange(new Control[] { pnlIndicator, lblStatus, lblCount, btnStart, btnStop, btnClear, btnSave, lstLog, grpStats });
         }
 
         private Button MakeButton(string text, int x) => new Button
@@ -93,7 +125,7 @@ namespace YMH219_KeyEventLogger
         {
             if (!_manager.IsRecording) return;
             if (!_pressedKeys.Add(e.KeyCode)) return;   // basılı tutma tekrarını atla
-            _manager.Add(e.KeyData.ToString(), "KeyDown");
+            _manager.Add(e.KeyCode.ToString(), "KeyDown");
         }
 
         private void Form1_KeyUp(object sender, KeyEventArgs e)
@@ -149,6 +181,27 @@ namespace YMH219_KeyEventLogger
             btnStop.Enabled = rec;
             btnClear.Enabled = _manager.Count > 0;
             btnSave.Enabled = _manager.Count > 0;
+
+            UpdateStats();
+        }
+
+        /// <summary>Sağdaki istatistik panelini günceller.</summary>
+        private void UpdateStats()
+        {
+            lblPressCount.Text = $"Toplam tuş basışı: {_manager.PressCount}";
+            lblDistinct.Text = $"Farklı tuş sayısı: {_manager.DistinctKeyCount}";
+
+            lstTopKeys.BeginUpdate();
+            lstTopKeys.Items.Clear();
+            int rank = 1;
+            foreach (var pair in _manager.GetTopKeys(TopKeyCount))
+            {
+                lstTopKeys.Items.Add($"{rank}. {pair.Key,-10} {pair.Value,3}");
+                rank++;
+            }
+            if (lstTopKeys.Items.Count == 0)
+                lstTopKeys.Items.Add("(henüz kayıt yok)");
+            lstTopKeys.EndUpdate();
         }
     }
 }

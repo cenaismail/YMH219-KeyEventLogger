@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace YMH219_KeyEventLogger
@@ -30,6 +31,29 @@ namespace YMH219_KeyEventLogger
         }
 
         public void Clear() => _entries.Clear();
+
+        // ---------------------------------------------------------- İstatistikler
+        // Yalnızca KeyDown kayıtları sayılır; her tuş basışı bir kez sayılsın diye.
+
+        /// <summary>Toplam tuş basışı sayısı.</summary>
+        public int PressCount => _entries.Count(e => e.EventType == "KeyDown");
+
+        /// <summary>Kaç farklı tuşa basıldığı.</summary>
+        public int DistinctKeyCount =>
+            _entries.Where(e => e.EventType == "KeyDown").Select(e => e.KeyName).Distinct().Count();
+
+        /// <summary>En sık basılan tuşlar ve basılma sayıları (çoktan aza).</summary>
+        public List<KeyValuePair<string, int>> GetTopKeys(int count)
+        {
+            return _entries
+                .Where(e => e.EventType == "KeyDown")
+                .GroupBy(e => e.KeyName)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .Take(count)
+                .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
+                .ToList();
+        }
 
         /// <summary>Kayıtları yerel .txt dosyasına yazar.</summary>
         public void SaveToFile(string path)
